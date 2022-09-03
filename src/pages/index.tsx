@@ -5,7 +5,9 @@ import { trpc } from "../utils/trpc";
 import { useCountdown } from "../utils/useCountdown";
 import isBetween from "dayjs/plugin/isBetween";
 import ReactPlayer from "react-player/youtube";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import useSWR from "swr";
+import clsx from "clsx";
 
 dayjs.extend(isBetween);
 
@@ -20,6 +22,11 @@ type LaunchEvent = {
 
 const Home: NextPage = () => {
   const SCHEDULED_T0 = "2022-09-03T18:17:00Z";
+  const fetcher = (url: string) => fetch(url).then((r) => r.json());
+  const { data, error } = useSWR(
+    "https://opti21.github.io/artemis-data/public/artemis.json",
+    fetcher
+  );
 
   const LAUNCH_EVENTS = [
     {
@@ -293,33 +300,37 @@ const Home: NextPage = () => {
     },
   ];
 
-  const activeEvents = LAUNCH_EVENTS.filter((lEvent) => {
-    const isActive = dayjs().isBetween(
-      dayjs(SCHEDULED_T0)
-        .subtract(lEvent.activeBlock.start.hours, "hours")
-        .subtract(lEvent.activeBlock.start.minutes, "minutes"),
-      dayjs(SCHEDULED_T0)
-        .subtract(lEvent.activeBlock.end.hours, "hours")
-        .subtract(lEvent.activeBlock.end.minutes, "minutes")
-    );
+  const activeEvents = useCallback((eventData: LaunchEvent[]) => {
+    return eventData.filter((lEvent) => {
+      const isActive = dayjs().isBetween(
+        dayjs(SCHEDULED_T0)
+          .subtract(lEvent.activeBlock.start.hours, "hours")
+          .subtract(lEvent.activeBlock.start.minutes, "minutes"),
+        dayjs(SCHEDULED_T0)
+          .subtract(lEvent.activeBlock.end.hours, "hours")
+          .subtract(lEvent.activeBlock.end.minutes, "minutes")
+      );
 
-    return isActive;
-  });
+      return isActive;
+    });
+  }, []);
 
-  const upcomingEvents = LAUNCH_EVENTS.filter((lEvent) => {
-    const isUpcoming = dayjs().isBefore(
-      dayjs(SCHEDULED_T0)
-        .subtract(lEvent.activeBlock.start.hours, "hours")
-        .subtract(lEvent.activeBlock.start.minutes, "minutes")
-    );
+  const upcomingEvents = useCallback((eventData: LaunchEvent[]) => {
+    return eventData.filter((lEvent) => {
+      const isUpcoming = dayjs().isBefore(
+        dayjs(SCHEDULED_T0)
+          .subtract(lEvent.activeBlock.start.hours, "hours")
+          .subtract(lEvent.activeBlock.start.minutes, "minutes")
+      );
 
-    return isUpcoming;
-  });
+      return isUpcoming;
+    });
+  }, []);
 
-  console.log(activeEvents);
   const [days, hours, minutes, seconds] = useCountdown(
     dayjs(SCHEDULED_T0).toISOString()
   );
+  console.log(data)
 
   return (
     <>
@@ -338,60 +349,87 @@ const Home: NextPage = () => {
             playing={true}
           />
 
-          <div className="countdown text-8xl font-source-code font-black flex flex-row">
-            <div className="text-white flex flex-row">
-              <div>L-</div>
-              <div className="">{hours}</div>
-              <div>:</div>
-              <div>{minutes}</div>
-              <div>:</div>
-              <div>{seconds}</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center max-w-xl">
-            <div className="text-white font-bold text-2xl">
-              Current Launch Events
-            </div>
-            {activeEvents.map((lEvent) => {
-              return (
-                <div
-                  key={lEvent.id}
-                  className=" w-full rounded-md bg-orange-900 text-white p-2 text-center my-1"
+          {data ? (
+            <>
+              <div className="text-white font-bold text-2xl my-2">
+                Current Status:
+                <span
+                  className={clsx(
+                    "p-1 text-xl rounded-xl px-2 ml-2",
+                    data.status === "GO" && "bg-green-600",
+                    data.status === "NO-GO" && "bg-red-600",
+                    data.status === "SCRUBBED" && "bg-red-600"
+                  )}
                 >
-                  <div>{lEvent.description}</div>
-                  <div>
-                    (L-{lEvent.activeBlock.start.hours}H
-                    {lEvent.activeBlock.start.minutes}M -{" "}
-                    {lEvent.activeBlock.end.hours}H
-                    {lEvent.activeBlock.end.minutes}M)
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col items-center justify-center max-w-xl">
-            <div className="text-white font-bold text-2xl">Upcoming Events</div>
-            {upcomingEvents
-              .sort((a, b) => a.id - b.id)
-              .map((lEvent) => {
-                return (
-                  <div
-                    key={lEvent.id}
-                    className=" w-full rounded-md bg-orange-900 text-white p-2 text-center my-1"
-                  >
-                    <div>{lEvent.description}</div>
-                    <div>
-                      (L-{lEvent.activeBlock.start.hours}H
-                      {lEvent.activeBlock.start.minutes}M -{" "}
-                      {lEvent.activeBlock.end.hours}H
-                      {lEvent.activeBlock.end.minutes}M)
+                  {data.status}
+                </span>
+              </div>
+              {data.status === "GO" && (
+                <>
+                  <div className="countdown text-8xl font-source-code font-black flex flex-row">
+                    <div className="text-white flex flex-row">
+                      <div>L-</div>
+                      <div className="">{hours}</div>
+                      <div>:</div>
+                      <div>{minutes}</div>
+                      <div>:</div>
+                      <div>{seconds}</div>
                     </div>
                   </div>
-                );
-              })}
-          </div>
+
+                  <div className="active-events flex flex-col items-center justify-center max-w-xl">
+                    <div className="text-white font-bold text-2xl">
+                      Current Launch Events
+                    </div>
+                    {activeEvents(data.launchEvents).map(
+                      (lEvent: LaunchEvent) => {
+                        return (
+                          <div
+                            key={lEvent.id}
+                            className=" w-full rounded-md bg-orange-900 text-white p-2 text-center my-1"
+                          >
+                            <div>{lEvent.description}</div>
+                            <div>
+                              (L-{lEvent.activeBlock.start.hours}H
+                              {lEvent.activeBlock.start.minutes}M -{" "}
+                              {lEvent.activeBlock.end.hours}H
+                              {lEvent.activeBlock.end.minutes}M)
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <div className="upcoming-events flex flex-col items-center justify-center max-w-xl">
+                    <div className="text-white font-bold text-2xl">
+                      Upcoming Events
+                    </div>
+                    {upcomingEvents(data.launchEvents)
+                      .sort((a, b) => a.id - b.id)
+                      .map((lEvent) => {
+                        return (
+                          <div
+                            key={lEvent.id}
+                            className=" w-full rounded-md bg-orange-900 text-white p-2 text-center my-1"
+                          >
+                            <div>{lEvent.description}</div>
+                            <div>
+                              (L-{lEvent.activeBlock.start.hours}H
+                              {lEvent.activeBlock.start.minutes}M -{" "}
+                              {lEvent.activeBlock.end.hours}H
+                              {lEvent.activeBlock.end.minutes}M)
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="text-white">Loading...</div>
+          )}
         </div>
       </div>
     </>

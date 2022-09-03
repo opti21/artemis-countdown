@@ -6,7 +6,9 @@ import superjson from "superjson";
 import "../styles/globals.css";
 import { useEffect, useState } from "react";
 
+
 const MyApp: AppType = ({ Component, pageProps }) => {
+
   const [pageLoaded, setPageLoaded] = useState(false);
 
   useEffect(() => {
