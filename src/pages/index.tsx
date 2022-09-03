@@ -44,14 +44,7 @@ const Home: NextPage = () => {
       },
       description: "Built in countdown hold begins",
     },
-    {
-      id: 5,
-      activeBlock: {
-        start: { hours: 9, minutes: 40 },
-        end: { hours: 7, minutes: 10 },
-      },
-      description: "Launch team conducts a weather and tanking briefing",
-    },
+
     {
       id: 6,
       activeBlock: {
