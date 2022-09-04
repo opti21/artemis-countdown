@@ -330,7 +330,7 @@ const Home: NextPage = () => {
   const [days, hours, minutes, seconds] = useCountdown(
     dayjs(SCHEDULED_T0).toISOString()
   );
-  console.log(data)
+  console.log(data);
 
   return (
     <>
@@ -358,13 +358,14 @@ const Home: NextPage = () => {
                     "p-1 text-xl rounded-xl px-2 ml-2",
                     data.status === "GO" && "bg-green-600",
                     data.status === "NO-GO" && "bg-red-600",
-                    data.status === "SCRUBBED" && "bg-red-600"
+                    data.status === "SCRUBBED" && "bg-red-600",
+                    data.status === "DELAYED" && "bg-red-600"
                   )}
                 >
                   {data.status}
                 </span>
               </div>
-              {data.status === "GO" && (
+              {(data.status === "GO" || data.status === "DELAYED") && (
                 <>
                   <div className="countdown text-8xl font-source-code font-black flex flex-row">
                     <div className="text-white flex flex-row">
