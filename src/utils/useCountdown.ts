@@ -27,7 +27,7 @@ const getReturnValues = (countDown: number) => {
   const minutes = Math.floor((countDown % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((countDown % (1000 * 60)) / 1000);
 
-  return [pad(days), pad(hours), pad(minutes) , pad(seconds)];
+  return [pad(Math.abs(days)), pad(Math.abs(hours)), pad(Math.abs(minutes)) , pad(Math.abs(seconds))];
 };
 
 function pad(num: number) {
