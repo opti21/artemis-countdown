@@ -21,11 +21,16 @@ type LaunchEvent = {
 };
 
 const Home: NextPage = () => {
-  const SCHEDULED_T0 = "2022-09-03T18:17:00Z";
+  const [SCHEDULED_T0, setT0] = useState(new Date().toISOString())
+
   const fetcher = (url: string) => fetch(url).then((r) => r.json());
   const { data, error } = useSWR(
     "https://opti21.github.io/artemis-data/public/artemis.json",
-    fetcher
+    fetcher, {
+      onSuccess(data, key, config) {
+          setT0(data.scheduledT0)
+      },
+    }
   );
 
   const LAUNCH_EVENTS = [
@@ -313,7 +318,7 @@ const Home: NextPage = () => {
 
       return isActive;
     });
-  }, []);
+  }, [SCHEDULED_T0]);
 
   const upcomingEvents = useCallback((eventData: LaunchEvent[]) => {
     return eventData.filter((lEvent) => {
@@ -325,7 +330,7 @@ const Home: NextPage = () => {
 
       return isUpcoming;
     });
-  }, []);
+  }, [SCHEDULED_T0]);
 
   const [days, hours, minutes, seconds] = useCountdown(
     dayjs(SCHEDULED_T0).toISOString()
@@ -370,7 +375,9 @@ const Home: NextPage = () => {
                   <div className="countdown text-8xl font-source-code font-black flex flex-row">
                     <div className="text-white flex flex-row">
                       <div>L-</div>
-                      <div className="">{hours}</div>
+                      <div>{days}</div>
+                      <div>:</div>
+                      <div>{hours}</div>
                       <div>:</div>
                       <div>{minutes}</div>
                       <div>:</div>
